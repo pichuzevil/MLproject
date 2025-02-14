@@ -1,27 +1,41 @@
+import os
 import sys
-from src.logger import logging
+import dill
+import numpy as np
+import pandas as pd
+from src.exception import Custom_Exception
+from sklearn.metrics import r2_score
 
-def error_message_detail(error, error_detail : sys ):
-    _,_,exc_tb = error_detail.exc_info()
-    file_name = exc_tb.tb_frame.f_code.co_filename
-    error_message = "Erreur apparaissant au script python [{0}], ligne [{1}], message d'erreur [{2}]".format(
-    file_name, exc_tb.tb_lineno, str(error) )
 
-    return error_message
 
-class Custom_Exception(Exception):
-    
-    def __init__(self,error_message,error_detail:sys):
-        super().__init__(error_message)
-        self.error_message = error_message_detail(error_message, error_detail = error_detail)
+def save_object(file_path , obj):
+    try : 
+        dir_path = os.path.dirname(file_path)
 
-    def __str__(self):
-        return self.error_message
+        os.makedirs(dir_path, exist_ok = True)
 
-if __name__ == '__main__':
+        with open(file_path,'wb') as file_obj:
+            dill.dump(obj,file_obj)
 
-    try :
-        a = 1/0
     except Exception as e:
-        logging.info('Division par 0')
         raise Custom_Exception(e,sys)
+    
+def evaluate_model(X_train, y_train, X_test, y_test, models):
+    try: 
+        report={}
+        for i in range (len(list(models))):
+            model = list(models.values())[i]
+            model.fit(X_train,y_train)
+
+            y_train_pred = model.predict(X_train)
+            y_test_pred = model.predict(X_test)
+
+            train_model_score = r2_score(y_train, y_train_pred)
+            test_model_score = r2_score(y_test, y_test_pred)
+
+            report[list(models.keys())[i]] = test_model_score
+
+        return report
+    except Exception as e:
+        raise Custom_Exception(e,sys)
+                         
